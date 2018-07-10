@@ -20,3 +20,12 @@ note: 输出的csv文件不带有标签，因此输入的文件最好是平衡�
 example: 
 	python RFH.py S3_Athaliana.fasta output.csv DNA 0
 ```
+** 依赖 **
+```
+	*python 2.7.x
+	*pandas
+	*numpy
+	*itertools
+	*sys
+	*os
+```
