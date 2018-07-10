@@ -22,10 +22,10 @@ example:
 ```
 ** 依赖 **
 ```
-	*python 2.7.x
-	*pandas
-	*numpy
-	*itertools
-	*sys
-	*os
+	* python 2.7.x
+	* pandas
+	* numpy
+	* itertools
+	* sys
+	* os
 ```
