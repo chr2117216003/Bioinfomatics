@@ -1,6 +1,6 @@
 **这个文件夹内的程序用来提取RNA或者DNA特征**
 
-```
+```python
 运行命令如下：
 	python program.py input.fasta output.csv gene_type whether_N_filled
 ```
