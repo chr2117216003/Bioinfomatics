@@ -1,3 +1,4 @@
+#PCP Liu, Z., et al., pRNAm-PC: Predicting N(6)-methyladenosine sites in RNA sequences via physical-chemical properties. Anal Biochem, 2016. 497: p. 60-7.
 import pandas as pd
 import numpy as np
 import sys

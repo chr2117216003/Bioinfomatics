@@ -1,3 +1,4 @@
+#RFH  Chen, W., et al., Identifying N6-methyladenosine sites in the Arabidopsis thaliana transcriptome. Molecular genetics and genomics, 2016. 291(6): p. 2225-2229.
 import pandas as pd
 import numpy as np
 import os

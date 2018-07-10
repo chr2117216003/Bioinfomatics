@@ -1,3 +1,4 @@
+#PseDNC  Chen, W., et al., iRNA-Methyl: Identifying N6-methyladenosine sites using pseudo nucleotide composition. Analytical biochemistry, 2015. 490: p. 26-33.
 import pandas as pd
 import numpy as np
 import os
