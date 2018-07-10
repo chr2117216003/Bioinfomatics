@@ -3,7 +3,7 @@
 ```
 运行命令如下：
 	python program.py input.fasta output.csv gene_type whether_N_filled
-	```
+```
 program.py: 代表具体的程序，可在此文件夹内找到
 input.fasta: 代表输入的fasta文件
 output.csv: 代表输出的csv文件
@@ -14,4 +14,4 @@ note: 输出的csv文件不带有标签，因此输入的文件最好是平衡�
 ```
 example: 
 	python RFH.py S3_Athaliana.fasta output.csv DNA 0
-	```
+```
