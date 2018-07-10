@@ -15,7 +15,7 @@ gene_type: 可选参数是 RNA或者DNA
 whether_N_filled: 代表的是fasta文件内是否有N填充空白位置的存在,1代表存在，0代表不存在
 
 note: 输出的csv文件不带有标签，因此输入的文件最好是平衡数据集，这样前一半是正集合，后一半是负集合，比较好区分
-`
+	`
 example: 
 	python RFH.py S3_Athaliana.fasta output.csv DNA 0
 `
