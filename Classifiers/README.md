@@ -34,3 +34,7 @@
 * subprocess
 * numpy
 * easy_excel (这是附加的一个程序包，万师兄写的，我之前刚刚学习python的时候图方便调用的，其实pandas有更好的方法实现，只是我懒得改了，因此一直调用着)[链接](https://github.com/ShixiangWan/Easy-Classify)
+
+**附**
+·这里面的分类器都是经过参数寻优的，因此训练的非常慢，尤其在上千个的数据集中更慢，若为了图方便快捷一点，或者在论文的第一个分类器比较中不需要优化精度的比较，可以考虑万世想师兄的[Easy-Classify](https://github.com/ShixiangWan/Easy-Classify)
+·
