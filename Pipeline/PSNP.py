@@ -10,7 +10,7 @@ import numpy as np
 import itertools
 from sklearn.model_selection import KFold  
 from sklearn import svm
-from sklearn.cross_validation import train_test_split
+# from sklearn.cross_validation import train_test_split
 import math
 import easy_excel
 from sklearn.model_selection import *
@@ -193,7 +193,6 @@ if __name__=="__main__":
         y_pred_all.extend(y_pred)
         Y_all.extend(Y_test)
         ACC=metrics.accuracy_score(Y_test,y_pred)
-        print ACC
         precision, recall, SN, SP, GM, TP, TN, FP, FN = performance(Y_test, y_pred) 
         F1_Score=metrics.f1_score(Y_test, y_pred)
         F_measure=F1_Score
@@ -202,7 +201,6 @@ if __name__=="__main__":
         pos=TP+FN
         neg=FP+TN
         ACC_all=ACC_all+ACC
-        print "ACC_all:",ACC_all
         precision_all=precision_all+precision
         recall_all=recall_all+recall
         SN_all=SN_all+SN
