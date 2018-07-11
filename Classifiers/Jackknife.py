@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[ ]:
+# In[1]:
 
 # !/use/bin/env python
 
@@ -40,7 +40,7 @@ CV_num=sys.argv[2]
 n_jobs_value=sys.argv[3]
 
 
-# In[ ]:
+# In[5]:
 
 def performance(labelArr, predictArr):
     #labelArr[i] is actual value,predictArr[i] is predict value
@@ -78,7 +78,7 @@ def performance(labelArr, predictArr):
 # In[ ]:
 
 """
-    cross validation
+    jackknife svm
 """
 classifier="SVM"
 datapath =path+outputname+".csv"
@@ -88,20 +88,43 @@ Y = list(map(lambda x: 1, xrange(len(train_data) // 2)))
 Y2 = list(map(lambda x: 0, xrange(len(train_data) // 2)))
 Y.extend(Y2)
 Y = np.array(Y)
-svc = svm.SVC()
+X_test=None
+Y_test=None
+y_predict=[]
+y_predict_prob=[]
+print "start"
 parameters = {'kernel': ['rbf'], 'C':map(lambda x:2**x,np.linspace(-2,5,7)), 'gamma':map(lambda x:2**x,np.linspace(-5,2,7))}
-clf = GridSearchCV(svc, parameters, cv=CV_num, n_jobs=n_jobs_value, scoring='accuracy')
-clf.fit(X, Y)
+clf = GridSearchCV(svm.SVC(), parameters, cv=CV_num, n_jobs=n_jobs_value, scoring='accuracy')
+clf.fit(X,Y)
 C=clf.best_params_['C']
-# joblib.dump(clf,'/home02/chenhuangrong/'+name+'.model')
-# print clf.best_score_
 gamma=clf.best_params_['gamma']
-y_predict=cross_val_predict(svm.SVC(kernel='rbf',C=C,gamma=gamma),X,Y,cv=CV_num,n_jobs=n_jobs_value)
-y_predict_prob=cross_val_predict(svm.SVC(kernel='rbf',C=C,gamma=gamma,probability=True),X,Y,cv=CV_num,n_jobs=n_jobs_value,method='predict_proba')
-ROC_AUC_area=metrics.roc_auc_score(Y, y_predict_prob)
-predict_save=[Y.astype(int),y_predict.astype(int),y_predict_prob[:,1]]
+for index in xrange(len(train_data)):
+    X_test=np.array(X[index]).reshape(1,-1)
+    Y_test=np.array(Y[index]).reshape(1,-1)
+    X_train=None
+    Y_train=None
+    if index==0:
+        X_train=np.array(X[(index+1):])
+        Y_train=np.array(Y[(index+1):])
+    elif index==len(Y)-1:
+        X_train=np.array(X[0:index])
+        Y_train=np.array(Y[0:index])
+    else:
+        X_train=np.concatenate([np.array(X[0:index]),np.array(X[(index+1):])],axis=0)
+        Y_train=np.concatenate([np.array(Y[0:index]),np.array(Y[(index+1):])],axis=0)
+    svc = svm.SVC(probability=True,C=C,gamma=gamma) 
+    svc.fit(X_train, Y_train)
+    # joblib.dump(clf,'/home02/chenhuangrong/'+name+'.model')
+    # print clf.best_score_
+    y_p=svc.predict(X_test)
+    y_p_p=svc.predict_proba(X_test)
+    y_predict.append(y_p)
+    y_predict_prob.append(y_p_p)
+ROC_AUC_area=metrics.roc_auc_score(Y, y_predict)
+predict_save=[Y.astype(int),np.array(y_predict).astype(int)[:,0],np.array(y_predict_prob)[:,0,1]]
+print np.array(y_predict_prob)[:,0,1]
 predict_save=np.array(predict_save).T
-pd.DataFrame(predict_save).to_csv(path+outputname+"_"+classifier+'_predict.csv',header=None,index=False)
+pd.DataFrame(predict_save).to_csv(path+outputname+"_"+classifier+'_predict_jackknife.csv',header=None,index=False)
 ACC=metrics.accuracy_score(Y,y_predict)
 precision, recall, SN, SP, GM, TP, TN, FP, FN = performance(Y, y_predict)
 F1_Score=metrics.f1_score(Y, y_predict)
@@ -111,16 +134,8 @@ pos=TP+FN
 neg=FP+TN
 savedata=[[[classifier+"C:"+str(C)+"gamma:"+str(gamma),ACC,precision, recall,SN, SP, GM,F_measure,F1_Score,MCC,ROC_AUC_area,TP,FN,FP,TN,pos,neg]]]
 print savedata
-print X.shape[1]
-easy_excel.save(classifier+"_crossvalidation",[str(X.shape[1])],savedata,path+'cross_validation_'+classifier+"_"+outputname+'.xls')
-# y_predict_proba=cross_val_predict(svm.SVC(kernel='rbf',C=C,gamma=gamma,probability=True),X,Y,cv=10,method="predict_proba")
-# Y=pd.DataFrame(Y)    
-# y_predict_proba=pd.DataFrame(y_predict_proba)
-# y_predict_proba=pd.concat([Y,y_predict_proba],axis=1)
-# pd.DataFrame(y_predict_proba).to_csv('/home02/chenhuangrong/RFH_ten_cross_validation_label.csv',header=None,index=False)
-# y_predict=pd.DataFrame(y_predict)
-# y_predict_=pd.concat([Y,y_predict],axis=1)
-# pd.DataFrame(y_predict_).to_csv('/home02/chenhuangrong/RFH_ten_cross_validation_predict.csv',header=None,index=False)
+easy_excel.save(classifier+"_crossvalidation",[str(X.shape[1])],savedata,path+'cross_validation_'+classifier+"_"+outputname+'jackknife.xls')
+print "end"
 
 
 # In[ ]:
@@ -136,7 +151,12 @@ Y = list(map(lambda x: 1, xrange(len(train_data) // 2)))
 Y2 = list(map(lambda x: 0, xrange(len(train_data) // 2)))
 Y.extend(Y2)
 Y = np.array(Y)
-GBDT = GradientBoostingClassifier(learning_rate=0.1,min_samples_split=300,min_samples_leaf=20,max_depth=8,max_features='sqrt')
+X_test=None
+Y_test=None
+y_predict=[]
+y_predict_prob=[]
+print "start"
+GBDT = GradientBoostingClassifier(learning_rate=0.1,max_features='sqrt')
 parameters = {'n_estimators':range(10,120,1),'max_depth':range(3,14,2), 'min_samples_split':range(100,801,200),'min_samples_leaf':range(60,101,10)}
 clf = GridSearchCV(GBDT, parameters, cv=CV_num, n_jobs=n_jobs_value, scoring='accuracy')
 clf.fit(X, Y)
@@ -144,17 +164,33 @@ n_estimators=clf.best_params_['n_estimators']
 max_depth=clf.best_params_['max_depth']
 min_samples_split=clf.best_params_['min_samples_split']
 min_samples_leaf=clf.best_params_['min_samples_leaf']
-# joblib.dump(clf,'/home02/chenhuangrong/'+name+'.model')
-# print clf.best_score_
-y_predict=cross_val_predict(GradientBoostingClassifier(n_estimators=n_estimators,learning_rate=0.1,min_samples_split=min_samples_split,
-                                                       min_samples_leaf=min_samples_leaf,max_depth=max_depth,max_features='sqrt'),X,Y,cv=CV_num,n_jobs=n_jobs_value)
-
-y_predict_prob=cross_val_predict(GradientBoostingClassifier(n_estimators=n_estimators,learning_rate=0.1,min_samples_split=min_samples_split,
-                                                       min_samples_leaf=min_samples_leaf,max_depth=max_depth,max_features='sqrt'),X,Y,cv=CV_num,n_jobs=n_jobs_value,method='predict_proba')
-ROC_AUC_area=metrics.roc_auc_score(Y, y_predict_prob)
-predict_save=[Y.astype(int),y_predict.astype(int),y_predict_prob[:,1]]
+for index in xrange(len(train_data)):
+    X_test=np.array(X[index]).reshape(1,-1)
+    Y_test=np.array(Y[index]).reshape(1,-1)
+    X_train=None
+    Y_train=None
+    if index==0:
+        X_train=np.array(X[(index+1):])
+        Y_train=np.array(Y[(index+1):])
+    elif index==len(Y)-1:
+        X_train=np.array(X[0:index])
+        Y_train=np.array(Y[0:index])
+    else:
+        X_train=np.concatenate([np.array(X[0:index]),np.array(X[(index+1):])],axis=0)
+        Y_train=np.concatenate([np.array(Y[0:index]),np.array(Y[(index+1):])],axis=0)
+    GBDT = GradientBoostingClassifier(n_estimators=n_estimators,learning_rate=0.1,min_samples_split=min_samples_split,min_samples_leaf=min_samples_leaf,max_depth=max_depth,max_features='sqrt')
+    GBDT.fit(X_train,Y_train)
+    # joblib.dump(clf,'/home02/chenhuangrong/'+name+'.model')
+    # print clf.best_score_
+    y_p=GBDT.predict(X_test)
+    y_p_p=GBDT.predict_proba(X_test)
+    y_predict.append(y_p)
+    y_predict_prob.append(y_p_p)
+ROC_AUC_area=metrics.roc_auc_score(Y, y_predict)
+predict_save=[Y.astype(int),np.array(y_predict).astype(int)[:,0],np.array(y_predict_prob)[:,0,1]]
+print np.array(y_predict_prob)[:,0,1]
 predict_save=np.array(predict_save).T
-pd.DataFrame(predict_save).to_csv(path+outputname+"_"+classifier+'_predict.csv',header=None,index=False)
+pd.DataFrame(predict_save).to_csv(path+outputname+"_"+classifier+'_predict_jackknife.csv',header=None,index=False)
 ACC=metrics.accuracy_score(Y,y_predict)
 precision, recall, SN, SP, GM, TP, TN, FP, FN = performance(Y, y_predict)
 F1_Score=metrics.f1_score(Y, y_predict)
@@ -166,15 +202,8 @@ savedata=[[[classifier+"n_estimators:"+str(n_estimators)+"max_depth:"+str(max_de
             GM,F_measure,F1_Score,MCC,ROC_AUC_area,TP,FN,FP,TN,pos,neg]]]
 print savedata
 print X.shape[1]
-easy_excel.save(classifier+"_crossvalidation",[str(X.shape[1])],savedata,path+'cross_validation_'+classifier+"_"+outputname+'.xls')
-# y_predict_proba=cross_val_predict(svm.SVC(kernel='rbf',C=C,gamma=gamma,probability=True),X,Y,cv=10,method="predict_proba")
-# Y=pd.DataFrame(Y)    
-# y_predict_proba=pd.DataFrame(y_predict_proba)
-# y_predict_proba=pd.concat([Y,y_predict_proba],axis=1)
-# pd.DataFrame(y_predict_proba).to_csv('/home02/chenhuangrong/RFH_ten_cross_validation_label.csv',header=None,index=False)
-# y_predict=pd.DataFrame(y_predict)
-# y_predict_=pd.concat([Y,y_predict],axis=1)
-# pd.DataFrame(y_predict_).to_csv('/home02/chenhuangrong/RFH_ten_cross_validation_predict.csv',header=None,index=False)
+easy_excel.save(classifier+"_crossvalidation",[str(X.shape[1])],savedata,path+'cross_validation_'+classifier+"_"+outputname+'jackknife.xls')
+print "end"
 
 
 # In[ ]:
@@ -190,7 +219,9 @@ Y = list(map(lambda x: 1, xrange(len(train_data) // 2)))
 Y2 = list(map(lambda x: 0, xrange(len(train_data) // 2)))
 Y.extend(Y2)
 Y = np.array(Y)
-RF = RandomForestClassifier(min_samples_split=300,min_samples_leaf=20,max_depth=8,max_features='sqrt')
+y_predict=[]
+y_predict_prob=[]
+RF = RandomForestClassifier(max_features='sqrt')
 parameters = {'n_estimators':range(10,120,1),'max_depth':range(3,14,2), 'min_samples_split':range(100,801,200),'min_samples_leaf':range(60,101,10)}
 clf = GridSearchCV(RF, parameters, cv=CV_num, n_jobs=n_jobs_value, scoring='accuracy')
 clf.fit(X, Y)
@@ -198,17 +229,34 @@ n_estimators=clf.best_params_['n_estimators']
 max_depth=clf.best_params_['max_depth']
 min_samples_split=clf.best_params_['min_samples_split']
 min_samples_leaf=clf.best_params_['min_samples_leaf']
-# joblib.dump(clf,'/home02/chenhuangrong/'+name+'.model')
-# print clf.best_score_
-y_predict=cross_val_predict(RandomForestClassifier(n_estimators=n_estimators,min_samples_split=min_samples_split,
-                                                       min_samples_leaf=min_samples_leaf,max_depth=max_depth,max_features='sqrt'),X,Y,cv=CV_num,n_jobs=n_jobs_value)
+for index in xrange(len(train_data)):
+    X_test=np.array(X[index]).reshape(1,-1)
+    Y_test=np.array(Y[index]).reshape(1,-1)
+    X_train=None
+    Y_train=None
+    if index==0:
+        X_train=np.array(X[(index+1):])
+        Y_train=np.array(Y[(index+1):])
+    elif index==len(Y)-1:
+        X_train=np.array(X[0:index])
+        Y_train=np.array(Y[0:index])
+    else:
+        X_train=np.concatenate([np.array(X[0:index]),np.array(X[(index+1):])],axis=0)
+        Y_train=np.concatenate([np.array(Y[0:index]),np.array(Y[(index+1):])],axis=0)
+    RF = RandomForestClassifier(n_estimators=n_estimators,min_samples_split=min_samples_split,min_samples_leaf=min_samples_leaf,max_depth=max_depth,max_features='sqrt')
+    RF.fit(X_train, Y_train)
+    # joblib.dump(clf,'/home02/chenhuangrong/'+name+'.model')
+    # print clf.best_score_
+    y_p=RF.predict(X_test)
+    y_p_p=RF.predict_proba(X_test)
+    y_predict.append(y_p)
+    y_predict_prob.append(y_p_p)
 
-y_predict_prob=cross_val_predict(RandomForestClassifier(n_estimators=n_estimators,min_samples_split=min_samples_split,
-                                                       min_samples_leaf=min_samples_leaf,max_depth=max_depth,max_features='sqrt'),X,Y,cv=CV_num,n_jobs=n_jobs_value,method='predict_proba')
-ROC_AUC_area=metrics.roc_auc_score(Y, y_predict_prob)
-predict_save=[Y.astype(int),y_predict.astype(int),y_predict_prob[:,1]]
+ROC_AUC_area=metrics.roc_auc_score(Y, y_predict)
+predict_save=[Y.astype(int),np.array(y_predict).astype(int)[:,0],np.array(y_predict_prob)[:,0,1]]
+print np.array(y_predict_prob)[:,0,1]
 predict_save=np.array(predict_save).T
-pd.DataFrame(predict_save).to_csv(path+outputname+"_"+classifier+'_predict.csv',header=None,index=False)
+pd.DataFrame(predict_save).to_csv(path+outputname+"_"+classifier+'_predict_jackknife.csv',header=None,index=False)
 ACC=metrics.accuracy_score(Y,y_predict)
 precision, recall, SN, SP, GM, TP, TN, FP, FN = performance(Y, y_predict)
 F1_Score=metrics.f1_score(Y, y_predict)
@@ -220,7 +268,7 @@ savedata=[[[classifier+"n_estimators:"+str(n_estimators)+"max_depth:"+str(max_de
             GM,F_measure,F1_Score,MCC,ROC_AUC_area,TP,FN,FP,TN,pos,neg]]]
 print savedata
 print X.shape[1]
-easy_excel.save(classifier+"_crossvalidation",[str(X.shape[1])],savedata,path+'cross_validation_'+classifier+"_"+outputname+'.xls')
+easy_excel.save(classifier+"_crossvalidation",[str(X.shape[1])],savedata,path+'cross_validation_'+classifier+"_"+outputname+'jackknife.xls')
 # y_predict_proba=cross_val_predict(svm.SVC(kernel='rbf',C=C,gamma=gamma,probability=True),X,Y,cv=10,method="predict_proba")
 # Y=pd.DataFrame(Y)    
 # y_predict_proba=pd.DataFrame(y_predict_proba)
@@ -236,7 +284,6 @@ easy_excel.save(classifier+"_crossvalidation",[str(X.shape[1])],savedata,path+'c
 """
     cross validation NB
 """
-from sklearn.naive_bayes import MultinomialNB
 classifier="NB"
 datapath =path+outputname+".csv"
 train_data = pd.read_csv(datapath, header=None, index_col=None)
@@ -245,17 +292,33 @@ Y = list(map(lambda x: 1, xrange(len(train_data) // 2)))
 Y2 = list(map(lambda x: 0, xrange(len(train_data) // 2)))
 Y.extend(Y2)
 Y = np.array(Y)
-# joblib.dump(clf,'/home02/chenhuangrong/'+name+'.model')
-# print clf.best_score_
-y_predict=cross_val_predict(MultinomialNB(),X,Y,cv=CV_num,n_jobs=n_jobs_value)
-
-y_predict_prob=cross_val_predict(MultinomialNB(),X,Y,cv=CV_num,n_jobs=n_jobs_value,method='predict_proba')
-
-ROC_AUC_area=metrics.roc_auc_score(Y, y_predict_prob)
-
-predict_save=[Y.astype(int),y_predict.astype(int),y_predict_prob[:,1]]
+y_predict=[]
+y_predict_prob=[]
+for index in xrange(len(train_data)):
+    X_test=np.array(X[index]).reshape(1,-1)
+    Y_test=np.array(Y[index]).reshape(1,-1)
+    X_train=None
+    Y_train=None
+    if index==0:
+        X_train=np.array(X[(index+1):])
+        Y_train=np.array(Y[(index+1):])
+    elif index==len(Y)-1:
+        X_train=np.array(X[0:index])
+        Y_train=np.array(Y[0:index])
+    else:
+        X_train=np.concatenate([np.array(X[0:index]),np.array(X[(index+1):])],axis=0)
+        Y_train=np.concatenate([np.array(Y[0:index]),np.array(Y[(index+1):])],axis=0)
+    clf=GaussianNB()
+    clf.fit(X_train,Y_train)
+    y_p=clf.predict(X_test)
+    y_p_p=clf.predict_proba(X_test)
+    y_predict.append(y_p)
+    y_predict_prob.append(y_p_p)
+ROC_AUC_area=metrics.roc_auc_score(Y, y_predict)
+predict_save=[Y.astype(int),np.array(y_predict).astype(int)[:,0],np.array(y_predict_prob)[:,0,1]]
+print np.array(y_predict_prob)[:,0,1]
 predict_save=np.array(predict_save).T
-pd.DataFrame(predict_save).to_csv(path+outputname+"_"+classifier+'_predict.csv',header=None,index=False)
+pd.DataFrame(predict_save).to_csv(path+outputname+"_"+classifier+'_predict_jackknife.csv',header=None,index=False)
 ACC=metrics.accuracy_score(Y,y_predict)
 precision, recall, SN, SP, GM, TP, TN, FP, FN = performance(Y, y_predict)
 F1_Score=metrics.f1_score(Y, y_predict)
@@ -266,15 +329,7 @@ neg=FP+TN
 savedata=[[[classifier,ACC,precision, recall,SN, SP, GM,F_measure,F1_Score,MCC,ROC_AUC_area,TP,FN,FP,TN,pos,neg]]]
 print savedata
 print X.shape[1]
-easy_excel.save(classifier+"_crossvalidation",[str(X.shape[1])],savedata,path+'cross_validation_'+classifier+"_"+outputname+'.xls')
-# y_predict_proba=cross_val_predict(svm.SVC(kernel='rbf',C=C,gamma=gamma,probability=True),X,Y,cv=10,method="predict_proba")
-# Y=pd.DataFrame(Y)    
-# y_predict_proba=pd.DataFrame(y_predict_proba)
-# y_predict_proba=pd.concat([Y,y_predict_proba],axis=1)
-# pd.DataFrame(y_predict_proba).to_csv('/home02/chenhuangrong/RFH_ten_cross_validation_label.csv',header=None,index=False)
-# y_predict=pd.DataFrame(y_predict)
-# y_predict_=pd.concat([Y,y_predict],axis=1)
-# pd.DataFrame(y_predict_).to_csv('/home02/chenhuangrong/RFH_ten_cross_validation_predict.csv',header=None,index=False)
+easy_excel.save(classifier+"_crossvalidation",[str(X.shape[1])],savedata,path+'cross_validation_'+classifier+"_"+outputname+'jackknife.xls')
 
 
 # In[ ]:
@@ -290,22 +345,40 @@ Y = list(map(lambda x: 1, xrange(len(train_data) // 2)))
 Y2 = list(map(lambda x: 0, xrange(len(train_data) // 2)))
 Y.extend(Y2)
 Y = np.array(Y)
+y_predict=[]
+y_predict_prob=[]
 logisReg = LogisticRegression()
 C_range = 10.0 ** np.arange(-4,3,1)
 grid_parame = dict(C=C_range)
 clf = GridSearchCV(logisReg, grid_parame, cv=CV_num, n_jobs=n_jobs_value, scoring='accuracy')
-clf.fit(X, Y)
+clf.fit(X,Y)
 C=clf.best_params_['C']
-# joblib.dump(clf,'/home02/chenhuangrong/'+name+'.model')
-# print clf.best_score_
+for index in xrange(len(train_data)):
+    X_test=np.array(X[index]).reshape(1,-1)
+    Y_test=np.array(Y[index]).reshape(1,-1)
+    X_train=None
+    Y_train=None
+    if index==0:
+        X_train=np.array(X[(index+1):])
+        Y_train=np.array(Y[(index+1):])
+    elif index==len(Y)-1:
+        X_train=np.array(X[0:index])
+        Y_train=np.array(Y[0:index])
+    else:
+        X_train=np.concatenate([np.array(X[0:index]),np.array(X[(index+1):])],axis=0)
+        Y_train=np.concatenate([np.array(Y[0:index]),np.array(Y[(index+1):])],axis=0)
+    logisReg = LogisticRegression(C=C)
+    logisReg.fit(X_train,Y_train)
+    y_p=logisReg.predict(X_test)
+    y_p_p=logisReg.predict_proba(X_test)
+    y_predict.append(y_p)
+    y_predict_prob.append(y_p_p)
 
-y_predict=cross_val_predict(LogisticRegression(C=C),X,Y,cv=CV_num,n_jobs=n_jobs_value)
-
-y_predict_prob=cross_val_predict(LogisticRegression(C=C),X,Y,cv=CV_num,n_jobs=n_jobs_value,method='predict_proba')
-ROC_AUC_area=metrics.roc_auc_score(Y, y_predict_prob)
-predict_save=[Y.astype(int),y_predict.astype(int),y_predict_prob[:,1]]
+ROC_AUC_area=metrics.roc_auc_score(Y, y_predict)
+predict_save=[Y.astype(int),np.array(y_predict).astype(int)[:,0],np.array(y_predict_prob)[:,0,1]]
+print np.array(y_predict_prob)[:,0,1]
 predict_save=np.array(predict_save).T
-pd.DataFrame(predict_save).to_csv(path+outputname+"_"+classifier+'_predict.csv',header=None,index=False)
+pd.DataFrame(predict_save).to_csv(path+outputname+"_"+classifier+'_predict_jackknife.csv',header=None,index=False)
 ACC=metrics.accuracy_score(Y,y_predict)
 precision, recall, SN, SP, GM, TP, TN, FP, FN = performance(Y, y_predict)
 F1_Score=metrics.f1_score(Y, y_predict)
@@ -316,7 +389,7 @@ neg=FP+TN
 savedata=[[[classifier+"C:"+str(C),ACC,precision, recall,SN, SP, GM,F_measure,F1_Score,MCC,ROC_AUC_area,TP,FN,FP,TN,pos,neg]]]
 print savedata
 print X.shape[1]
-easy_excel.save(classifier+"_crossvalidation",[str(X.shape[1])],savedata,path+'cross_validation_'+classifier+"_"+outputname+'.xls')
+easy_excel.save(classifier+"_crossvalidation",[str(X.shape[1])],savedata,path+'cross_validation_'+classifier+"_"+outputname+'_jackknife.xls')
 # y_predict_proba=cross_val_predict(svm.SVC(kernel='rbf',C=C,gamma=gamma,probability=True),X,Y,cv=10,method="predict_proba")
 # Y=pd.DataFrame(Y)    
 # y_predict_proba=pd.DataFrame(y_predict_proba)
@@ -340,6 +413,8 @@ Y = list(map(lambda x: 1, xrange(len(train_data) // 2)))
 Y2 = list(map(lambda x: 0, xrange(len(train_data) // 2)))
 Y.extend(Y2)
 Y = np.array(Y)
+y_predict=[]
+y_predict_prob=[]
 knn = KNeighborsClassifier()
 #设置k的范围
 k_range = list(range(1,10))
@@ -348,23 +423,39 @@ weight_options = ['uniform','distance']
 algorithm_options = ['auto','ball_tree','kd_tree','brute']
 param_gridknn = dict(n_neighbors = k_range,weights = weight_options,algorithm=algorithm_options,leaf_size=leaf_range)
 clf = GridSearchCV(knn, param_gridknn, cv=CV_num, n_jobs=n_jobs_value, scoring='accuracy')
-clf.fit(X, Y)
+clf.fit(X,Y)
 n_neighbors=clf.best_params_['n_neighbors']
 weights=clf.best_params_['weights']
 algorithm=clf.best_params_['algorithm']
 leaf_size=clf.best_params_['leaf_size']
+for index in xrange(len(train_data)):
+    X_test=np.array(X[index]).reshape(1,-1)
+    Y_test=np.array(Y[index]).reshape(1,-1)
+    X_train=None
+    Y_train=None
+    if index==0:
+        X_train=np.array(X[(index+1):])
+        Y_train=np.array(Y[(index+1):])
+    elif index==len(Y)-1:
+        X_train=np.array(X[0:index])
+        Y_train=np.array(Y[0:index])
+    else:
+        X_train=np.concatenate([np.array(X[0:index]),np.array(X[(index+1):])],axis=0)
+        Y_train=np.concatenate([np.array(Y[0:index]),np.array(Y[(index+1):])],axis=0)
+    knn = KNeighborsClassifier(n_neighbors = n_neighbors,weights = weights,algorithm=algorithm,leaf_size=leaf_size)
+    knn.fit(X_train,Y_train)
+    y_p=knn.predict(X_test)
+    y_p_p=knn.predict_proba(X_test)
+    y_predict.append(y_p)
+    y_predict_prob.append(y_p_p)
+
 # joblib.dump(clf,'/home02/chenhuangrong/'+name+'.model')
 # print clf.best_score_
-
-y_predict=cross_val_predict(KNeighborsClassifier(n_neighbors=n_neighbors,weights=weights,algorithm=algorithm,leaf_size=leaf_size),X,Y,cv=CV_num,n_jobs=n_jobs_value)
-
-y_predict_prob=cross_val_predict(KNeighborsClassifier(n_neighbors=n_neighbors,weights=weights,algorithm=algorithm,leaf_size=leaf_size),X,Y,cv=CV_num,n_jobs=n_jobs_value,method='predict_proba')
-
-ROC_AUC_area=metrics.roc_auc_score(Y, y_predict_prob)
-
-predict_save=[Y.astype(int),y_predict.astype(int),y_predict_prob[:,1]]
+ROC_AUC_area=metrics.roc_auc_score(Y, y_predict)
+predict_save=[Y.astype(int),np.array(y_predict).astype(int)[:,0],np.array(y_predict_prob)[:,0,1]]
+print np.array(y_predict_prob)[:,0,1]
 predict_save=np.array(predict_save).T
-pd.DataFrame(predict_save).to_csv(path+outputname+"_"+classifier+'_predict.csv',header=None,index=False)
+pd.DataFrame(predict_save).to_csv(path+outputname+"_"+classifier+'_predict_jackknife.csv',header=None,index=False)
 ACC=metrics.accuracy_score(Y,y_predict)
 precision, recall, SN, SP, GM, TP, TN, FP, FN = performance(Y, y_predict)
 F1_Score=metrics.f1_score(Y, y_predict)
@@ -376,7 +467,7 @@ savedata=[[[classifier+"n_neighbors:"+str(n_neighbors)+"weights:"+str(weights)+"
             ACC,precision, recall,SN, SP, GM,F_measure,F1_Score,MCC,ROC_AUC_area,TP,FN,FP,TN,pos,neg]]]
 print savedata
 print X.shape[1]
-easy_excel.save(classifier+"_crossvalidation",[str(X.shape[1])],savedata,path+'cross_validation_'+classifier+"_"+outputname+'.xls')
+easy_excel.save(classifier+"_crossvalidation",[str(X.shape[1])],savedata,path+'cross_validation_'+classifier+"_"+outputname+'_jackknife.xls')
 # y_predict_proba=cross_val_predict(svm.SVC(kernel='rbf',C=C,gamma=gamma,probability=True),X,Y,cv=10,method="predict_proba")
 # Y=pd.DataFrame(Y)    
 # y_predict_proba=pd.DataFrame(y_predict_proba)
@@ -400,33 +491,48 @@ Y = list(map(lambda x: 1, xrange(len(train_data) // 2)))
 Y2 = list(map(lambda x: 0, xrange(len(train_data) // 2)))
 Y.extend(Y2)
 Y = np.array(Y)
-parameters = [{'n_estimators':range(1,100,5),
-                      'max_depth':range(1,100,5),
-                      'learning_rate':[0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8]
-                      ,'subsample':[0.75,0.8,0.85,0.9]
+y_predict=[]
+y_predict_prob=[]
+parameters = [{'n_estimators':range(1,10,1),
+                          'max_depth':range(2,10),
+                          'learning_rate':[0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8]
+#                           ,'subsample':[0.75,0.8,0.85,0.9]
                       }]
 clf = GridSearchCV(XGBClassifier(), parameters, cv=CV_num, n_jobs=n_jobs_value, scoring='accuracy')
-clf.fit(X, Y)
+clf.fit(X_train,Y_train)
 n_estimators=clf.best_params_['n_estimators']
 max_depth=clf.best_params_['max_depth']
 learning_rate=clf.best_params_['learning_rate']
-subsample=clf.best_params_['subsample']
+# subsample=clf.best_params_['subsample']
+for index in xrange(len(train_data)):
+    X_test=np.array(X[index]).reshape(1,-1)
+    Y_test=np.array(Y[index]).reshape(1,-1)
+    X_train=None
+    Y_train=None
+    if index==0:
+        X_train=np.array(X[(index+1):])
+        Y_train=np.array(Y[(index+1):])
+    elif index==len(Y)-1:
+        X_train=np.array(X[0:index])
+        Y_train=np.array(Y[0:index])
+    else:
+        X_train=np.concatenate([np.array(X[0:index]),np.array(X[(index+1):])],axis=0)
+        Y_train=np.concatenate([np.array(Y[0:index]),np.array(Y[(index+1):])],axis=0)
+#     xgboost=XGBClassifier(n_estimators=n_estimators,max_depth=max_depth,learning_rate=learning_rate,subsample=subsample)
+    xgboost=XGBClassifier(n_estimators=n_estimators,max_depth=max_depth,learning_rate=learning_rate)
+    xgboost.fit(X_train,Y_train)
+    y_p=xgboost.predict(X_test)
+    y_p_p=clf.predict_proba(X_test)
+    y_predict.append(y_p)
+    y_predict_prob.append(y_p_p)
+
 # joblib.dump(clf,'/home02/chenhuangrong/'+name+'.model')
 # print clf.best_score_
-# y_predict=cross_val_predict(XGBClassifier(n_estimators=n_estimators,learning_rate=learning_rate,
-#                                                        max_depth=max_depth),X,Y,cv=CV_num,n_jobs=12)
-y_predict=cross_val_predict(XGBClassifier(n_estimators=n_estimators,learning_rate=learning_rate,
-                                                       subsample=subsample,max_depth=max_depth),X,Y,cv=CV_num,n_jobs=n_jobs_value)
-
-# y_predict_prob=cross_val_predict(XGBClassifier(n_estimators=n_estimators,learning_rate=learning_rate,
-#                                                        max_depth=max_depth),X,Y,cv=CV_num,n_jobs=12,method='predict_proba')
-
-y_predict_prob=cross_val_predict(XGBClassifier(n_estimators=n_estimators,learning_rate=learning_rate,
-                                                       subsample=subsample,max_depth=max_depth),X,Y,cv=CV_num,n_jobs=n_jobs_value,method='predict_proba')
-ROC_AUC_area=metrics.roc_auc_score(Y, y_predict_prob)
-predict_save=[Y.astype(int),y_predict.astype(int),y_predict_prob[:,1]]
+ROC_AUC_area=metrics.roc_auc_score(Y, y_predict)
+predict_save=[Y.astype(int),np.array(y_predict).astype(int)[:,0],np.array(y_predict_prob)[:,0,1]]
+print np.array(y_predict_prob)[:,0,1]
 predict_save=np.array(predict_save).T
-pd.DataFrame(predict_save).to_csv(path+outputname+"_"+classifier+'_predict.csv',header=None,index=False)
+pd.DataFrame(predict_save).to_csv(path+outputname+"_"+classifier+'_predict_jackknife.csv',header=None,index=False)
 ACC=metrics.accuracy_score(Y,y_predict)
 precision, recall, SN, SP, GM, TP, TN, FP, FN = performance(Y, y_predict)
 F1_Score=metrics.f1_score(Y, y_predict)
@@ -443,7 +549,7 @@ savedata=[[[classifier+"n_estimators:"+str(n_estimators)+"max_depth:"+str(max_de
 
 print savedata
 print X.shape[1]
-easy_excel.save(classifier+"_crossvalidation",[str(X.shape[1])],savedata,path+'cross_validation_'+classifier+"_"+outputname+'.xls')
+easy_excel.save(classifier+"_crossvalidation",[str(X.shape[1])],savedata,path+'cross_validation_'+classifier+"_"+outputname+'jackknife.xls')
 # y_predict_proba=cross_val_predict(svm.SVC(kernel='rbf',C=C,gamma=gamma,probability=True),X,Y,cv=10,method="predict_proba")
 # Y=pd.DataFrame(Y)    
 # y_predict_proba=pd.DataFrame(y_predict_proba)
@@ -452,14 +558,4 @@ easy_excel.save(classifier+"_crossvalidation",[str(X.shape[1])],savedata,path+'c
 # y_predict=pd.DataFrame(y_predict)
 # y_predict_=pd.concat([Y,y_predict],axis=1)
 # pd.DataFrame(y_predict_).to_csv('/home02/chenhuangrong/RFH_ten_cross_validation_predict.csv',header=None,index=False)
-
-
-# In[ ]:
-
-
-
-
-# In[ ]:
-
-
 
