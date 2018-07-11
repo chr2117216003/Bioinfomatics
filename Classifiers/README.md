@@ -33,6 +33,7 @@
 * math
 * subprocess
 * numpy
+* warnings
 * easy_excel (这是附加的一个程序包，万师兄写的，我之前刚刚学习python的时候图方便调用的，其实pandas有更好的方法实现，只是我懒得改了，因此一直调用着)[链接](https://github.com/ShixiangWan/Easy-Classify)
 
 **附**
