@@ -1,13 +1,13 @@
 **这个文件夹内的程序用来参数优化和训练模型，最后得到交叉验证的结果**
 
 **涉及到的分类器有:**
-*Vupport Vector Machine(SVM)
-*K-Nearest Neighbors(KNN)
-*Random Forest(RF)
-*Naive Bayes(NB)
-*Logistic Regression(LR)
-*Gradient Boosting Decision Tree
-*eXtreme Gradient Boosting(XGBoost) 
+* Support Vector Machine(SVM)
+* K-Nearest Neighbors(KNN)
+* Random Forest(RF)
+* Naive Bayes(NB)
+* Logistic Regression(LR)
+* Gradient Boosting Decision Tree
+* eXtreme Gradient Boosting(XGBoost) 
 ```
 	python program.py input.csv crossvalidation_value n_jobs_value
 ```
