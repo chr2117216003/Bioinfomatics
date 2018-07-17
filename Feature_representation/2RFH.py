@@ -14,6 +14,7 @@ def read_fasta_file(path):
     '''
     used for load fasta data and transformd into numpy.array format
     '''
+    global mark_n
     fh=open(path)
     seq=[]
     for line in fh:
@@ -79,5 +80,6 @@ if mark_n==True:
 else:
     for index,sequence in enumerate(sequences):
         features_data.append(fetch_singleline_features_withoutN(sequence))
-
+print(np.array(features_data).shape)
+print("mark_n",mark_n)
 pd.DataFrame(features_data).to_csv(path+outputname,header=None,index=None)
