@@ -111,6 +111,7 @@ def read_fasta_file(path):
 if mark_n==True:
     RNA_code+="N"
 seq=read_fasta_file(m6a_2614_sequence)
+
 print(np.array(seq).shape)
 def make_kmer_list(k, alphabet):
     try:
@@ -123,11 +124,10 @@ def make_kmer_list(k, alphabet):
         raise ValueError
 positive_seq=seq[:positive_num_index]
 negative_seq=seq[positive_num_index:]
-kf = KFold(n_splits=division_num,shuffle=False)  
-kf_neg=KFold(n_splits=division_num,shuffle=False)  
+kf = KFold(n_splits=positive_num_index,shuffle=False)  
+kf_neg=KFold(n_splits=positive_num_index,shuffle=False)  
 if __name__=="__main__":
     for (positive_train_index , positive_test_index),(negative_train_index,negative_test_index) in zip(kf.split(positive_seq),kf_neg.split(negative_seq)):  
-        print(positive_train_index , positive_test_index,negative_train_index,negative_test_index)
         positive_df=pd.DataFrame(positive_seq)
         positive_x_train=positive_df.iloc[positive_train_index,:]
         positive_y_train=positive_df.iloc[positive_test_index,:]
@@ -187,17 +187,17 @@ if __name__=="__main__":
             Y2_train = list(map(lambda x: 0, xrange(len(negative_train_index))))
             Y_train.extend(Y2_train)
             Y_train = np.array(Y_train)
-
+            print Y_train.shape[0]
             if jack_index==0:
                 Y_test=[0]
                 X_test1 = np.array(y_final_seq_value[1])
                 X_train1=np.concatenate([X_train1,np.array(y_final_seq_value[0]).reshape(1,length)],axis=0)
-                Y_train=np.concatenate([Y_train.reshape(division_num-2,1),np.array([1]).reshape(1,1)],axis=0)
+                Y_train=np.concatenate([Y_train.reshape(Y_train.shape[0],1),np.array([1]).reshape(1,1)],axis=0)
             else:
                 Y_test=[1]
                 X_test1 = np.array(y_final_seq_value[0])
                 X_train1=np.concatenate([X_train1,np.array(y_final_seq_value[1]).reshape(1,length)],axis=0)
-                Y_train=np.concatenate([Y_train.reshape(division_num-2,1),np.array(0).reshape(1,1)],axis=0)
+                Y_train=np.concatenate([Y_train.reshape(Y_train.shape[0],1),np.array(0).reshape(1,1)],axis=0)
             svc = svm.SVC(probability=True)
             parameters = {'kernel': ['rbf'], 'C':map(lambda x:2**x,np.linspace(-2,5,7)), 'gamma':map(lambda x:2**x,np.linspace(-5,2,7))}
             clf = GridSearchCV(svc, parameters, cv=crossvalidation_value, n_jobs=cpu_values, scoring='accuracy')
