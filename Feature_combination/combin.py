@@ -4,6 +4,7 @@ import numpy as np
 import sys
 from sklearn.preprocessing import MinMaxScaler
 whole_result=[]
+input_files=""
 whole_dimension=[]
 opts, args = getopt.getopt(sys.argv[1:], "hi:", )
 for op, value in opts:
